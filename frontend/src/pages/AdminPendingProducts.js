@@ -1,17 +1,28 @@
 import React, { useEffect, useState } from "react";
 import API from "../api/axios";
+import Loader from "../components/ui/Loader";
+import EmptyState from "../components/ui/EmptyState";
+import Button from "../components/ui/Button";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import InputField from "../components/ui/InputField";
+import { useToast } from "../components/ui/ToastContext";
+import { Link } from "react-router-dom";
+import { resolveImageUrl } from "../utils/image";
 
 function AdminPendingProducts() {
+  const { pushToast } = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [rejecting, setRejecting] = useState(null);
+  const [reason, setReason] = useState("");
 
   const fetchPending = async () => {
     try {
       const { data } = await API.get("/products/admin/pending");
       setProducts(data);
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to load pending products");
+      pushToast(error.response?.data?.message || "Failed to load pending products", "error");
     } finally {
       setLoading(false);
     }
@@ -19,79 +30,94 @@ function AdminPendingProducts() {
 
   useEffect(() => {
     fetchPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const approve = async (id) => {
     try {
       setActionLoading(true);
       await API.put(`/products/admin/${id}/approve`, {});
+      pushToast("Product approved", "success");
       await fetchPending();
     } catch (error) {
-      alert(error.response?.data?.message || "Approve failed");
+      pushToast(error.response?.data?.message || "Approve failed", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const reject = async (id) => {
-    const reason = prompt("Reason for rejection? (optional)") || "";
+  const reject = async () => {
+    if (!rejecting) return;
     try {
       setActionLoading(true);
-      await API.put(`/products/admin/${id}/reject`, { reason });
+      await API.put(`/products/admin/${rejecting}/reject`, { reason });
+      pushToast("Product rejected", "success");
+      setRejecting(null);
+      setReason("");
       await fetchPending();
     } catch (error) {
-      alert(error.response?.data?.message || "Reject failed");
+      pushToast(error.response?.data?.message || "Reject failed", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading) return <div style={{ padding: "40px" }}>Loading...</div>;
+  if (loading) return <div className="container-app"><Loader label="Loading pending products..." /></div>;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>Pending Products</h2>
+    <div className="container-app space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="page-title">Pending Products</h1>
+        <Link to="/admin/add-product" className="btn-primary">Add Product</Link>
+      </div>
 
       {products.length === 0 ? (
-        <p>No pending products.</p>
+        <EmptyState title="No pending products" description="Everything is approved or rejected already." />
       ) : (
-        <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
+        <div className="grid gap-3">
           {products.map((p) => (
-            <div key={p._id} style={card}>
-              <div>
-                <b>{p.name}</b>
-                <p style={{ margin: "6px 0", color: "#555" }}>₦{p.price} — {p.category}</p>
-                <small style={{ color: "#666" }}>
-                  Seller: {p.seller?.name} ({p.seller?.email})
-                </small>
+            <div key={p._id} className="card flex flex-wrap items-center gap-3 p-4">
+              <img
+                src={resolveImageUrl(p.image, "https://via.placeholder.com/100x80?text=No+Image")}
+                alt={p.name}
+                className="h-16 w-20 rounded-lg object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold md:text-base">{p.name}</p>
+                <p className="text-xs text-[color:var(--text-muted)]">₦{p.price} • {p.category}</p>
+                <p className="text-xs text-[color:var(--text-muted)]">Seller: {p.seller?.name} ({p.seller?.email})</p>
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button disabled={actionLoading} onClick={() => approve(p._id)} style={approveBtn}>
-                  Approve
-                </button>
-                <button disabled={actionLoading} onClick={() => reject(p._id)} style={rejectBtn}>
-                  Reject
-                </button>
+              <div className="flex gap-2">
+                <Button disabled={actionLoading} onClick={() => approve(p._id)}>Approve</Button>
+                <Button variant="danger" disabled={actionLoading} onClick={() => setRejecting(p._id)}>Reject</Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={Boolean(rejecting)}
+        title="Reject product"
+        description="Provide a reason so the seller can fix and resubmit."
+        confirmText="Reject"
+        danger
+        onCancel={() => {
+          setRejecting(null);
+          setReason("");
+        }}
+        onConfirm={reject}
+      >
+        <InputField
+          label="Rejection reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Poor image quality, incomplete description"
+        />
+      </ConfirmModal>
     </div>
   );
 }
-
-const card = {
-  border: "1px solid #eee",
-  borderRadius: "10px",
-  padding: "14px",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "14px",
-};
-const approveBtn = { padding: "10px 12px", borderRadius: "8px", border: "none", background: "black", color: "white", cursor: "pointer" };
-const rejectBtn = { padding: "10px 12px", borderRadius: "8px", border: "1px solid #ddd", background: "white", cursor: "pointer" };
 
 export default AdminPendingProducts;

@@ -1,10 +1,10 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+// Protect route (require login)
 exports.protect = async (req, res, next) => {
   let token;
 
-  // Check if token exists in headers
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
@@ -12,19 +12,33 @@ exports.protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(" ")[1];
 
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from DB (remove password)
       req.user = await User.findById(decoded.id).select("-password");
 
-      next();
+      return next();
     } catch (error) {
       return res.status(401).json({ message: "Not authorized, token failed" });
     }
   }
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+  return res.status(401).json({ message: "Not authorized, no token" });
+};
+
+// Admin only
+exports.admin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    return next();
   }
+
+  return res.status(403).json({ message: "Not authorized as admin" });
+};
+
+// Seller only
+exports.seller = (req, res, next) => {
+  if (req.user && req.user.role === "seller") {
+    return next();
+  }
+
+  return res.status(403).json({ message: "Not authorized as seller" });
 };

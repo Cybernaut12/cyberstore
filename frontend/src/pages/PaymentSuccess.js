@@ -1,57 +1,72 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { clearCart } from "../utils/cart";
+import Button from "../components/ui/Button";
+import Loader from "../components/ui/Loader";
 
 function PaymentSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [message, setMessage] = useState("Verifying payment...");
+  const [state, setState] = useState({ loading: true, ok: false, message: "Verifying payment...", order: null });
 
   useEffect(() => {
     const verifyPayment = async () => {
       try {
-        const params = new URLSearchParams(location.search);
-        const reference = params.get("reference");
+        const reference = new URLSearchParams(location.search).get("reference");
 
         if (!reference) {
-          setMessage("No payment reference found.");
+          setState({ loading: false, ok: false, message: "No payment reference found.", order: null });
           return;
         }
 
         const { data } = await API.get(`/paystack/verify/${reference}`);
-
         clearCart();
-
-        setMessage("Payment successful! Order confirmed.");
+        setState({ loading: false, ok: true, message: data.message || "Payment successful!", order: data.order || null });
       } catch (error) {
-        setMessage(
-          error.response?.data?.message || "Payment verification failed."
-        );
+        setState({
+          loading: false,
+          ok: false,
+          message: error.response?.data?.message || "Payment verification failed.",
+          order: null,
+        });
       }
     };
 
     verifyPayment();
   }, [location.search]);
 
-  return (
-    <div style={{ padding: "40px", textAlign: "center" }}>
-      <h2>{message}</h2>
+  if (state.loading) {
+    return (
+      <div className="container-app">
+        <Loader label="Verifying payment..." />
+      </div>
+    );
+  }
 
-      <button
-        onClick={() => navigate("/")}
-        style={{
-          marginTop: "20px",
-          padding: "10px 16px",
-          background: "black",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-        }}
-      >
-        Go Home
-      </button>
+  return (
+    <div className="container-app">
+      <section className="card mx-auto max-w-2xl p-8 text-center">
+        <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl ${state.ok ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
+          {state.ok ? "✓" : "!"}
+        </div>
+
+        <h1 className="mt-5 text-2xl font-extrabold">{state.ok ? "Payment successful!" : "Payment issue"}</h1>
+        <p className="mt-2 text-sm text-[color:var(--text-muted)]">{state.message}</p>
+
+        {state.order?.paymentReference ? (
+          <p className="mt-3 text-xs text-[color:var(--text-muted)]">Reference: {state.order.paymentReference}</p>
+        ) : null}
+
+        {state.order?._id ? (
+          <p className="mt-1 text-xs text-[color:var(--text-muted)]">Order ID: {state.order._id}</p>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {state.order?._id ? <Button onClick={() => navigate(`/orders/${state.order._id}`)}>View Order</Button> : null}
+          <Link to="/"><Button variant="secondary">Back Home</Button></Link>
+        </div>
+      </section>
     </div>
   );
 }

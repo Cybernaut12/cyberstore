@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../api/axios";
+import Loader from "../components/ui/Loader";
+import EmptyState from "../components/ui/EmptyState";
+import StatusPill from "../components/ui/StatusPill";
+import { useToast } from "../components/ui/ToastContext";
 
 function BuyerOrders() {
+  const { pushToast } = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,118 +17,49 @@ function BuyerOrders() {
         const { data } = await API.get("/orders/myorders");
         setOrders(data);
       } catch (error) {
-        alert(error.response?.data?.message || "Failed to load orders");
+        pushToast(error.response?.data?.message || "Failed to load orders", "error");
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
-  }, []);
+  }, [pushToast]);
 
-  if (loading) return <div style={{ padding: "40px" }}>Loading...</div>;
+  if (loading) return <div className="container-app"><Loader label="Loading your orders..." /></div>;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>My Orders</h2>
+    <div className="container-app space-y-4">
+      <h1 className="page-title">My Orders</h1>
 
       {orders.length === 0 ? (
-        <p>
-          No orders yet. <Link to="/">Start shopping</Link>
-        </p>
+        <EmptyState title="No orders yet" description="You have not made any purchase yet." action={<Link to="/" className="btn-primary">Start Shopping</Link>} />
       ) : (
-        <div style={{ marginTop: "20px", display: "grid", gap: "14px" }}>
+        <div className="grid gap-3">
           {orders.map((order) => (
-            <div
-              key={order._id}
-              style={{
-                border: "1px solid #eee",
-                borderRadius: "10px",
-                padding: "14px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div key={order._id} className="card p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p style={{ margin: 0 }}>
-                    <b>Order ID:</b> {order._id}
-                  </p>
-                  <p style={{ margin: "6px 0", color: "#555" }}>
-                    <b>Date:</b>{" "}
-                    {order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}
+                  <p className="text-sm font-semibold">Order #{order._id.slice(-8)}</p>
+                  <p className="text-xs text-[color:var(--text-muted)]">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}
                   </p>
                 </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0, fontWeight: "bold" }}>
-                    ₦{order.totalPrice}
-                  </p>
-                  <p style={{ margin: "6px 0" }}>
-                    {order.isPaid ? "✅ Paid" : "❌ Not Paid"}{" "}
-                    {order.status === "Delivered" ? "📦 Delivered" : ""}
-                  </p>
+                <div className="text-right">
+                  <p className="font-bold">₦{order.totalPrice}</p>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <StatusPill status={order.isPaid ? "paid" : "unpaid"}>{order.isPaid ? "Paid" : "Not Paid"}</StatusPill>
+                    <StatusPill status={String(order.status).toLowerCase() === "delivered" ? "delivered" : "pending"}>{order.status}</StatusPill>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ marginTop: "10px" }}>
-                <b>Items:</b>
-                <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
-                  {order.orderItems.map((item) => (
-                    <div
-                      key={item._id}
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        alignItems: "center",
-                        borderTop: "1px solid #f1f1f1",
-                        paddingTop: "8px",
-                      }}
-                    >
-                      <img
-                        src={
-                          item.image?.startsWith("http")
-                            ? item.image
-                            : "https://via.placeholder.com/80x60?text=No+Image"
-                        }
-                        alt={item.name}
-                        style={{
-                          width: "80px",
-                          height: "60px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <div>
-                        <p style={{ margin: 0 }}>
-                          <b>{item.name}</b>
-                        </p>
-                        <p style={{ margin: "4px 0", color: "#555" }}>
-                          Qty: {item.qty} × ₦{item.price}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-3 border-t border-[color:var(--border)] pt-3 text-sm text-[color:var(--text-muted)]">
+                {order.shippingAddress?.address}, {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}, {order.shippingAddress?.country}
               </div>
 
-              <div style={{ marginTop: "12px", color: "#555" }}>
-                <b>Shipping:</b>{" "}
-                {order.shippingAddress?.address}, {order.shippingAddress?.city},{" "}
-                {order.shippingAddress?.postalCode}, {order.shippingAddress?.country}
-              </div>
-
-              <Link to={`/orders/${order._id}`} style={{ textDecoration: "none" }}>
-                <button
-                  style={{
-                    marginTop: "12px",
-                    padding: "8px 12px",
-                    border: "1px solid #ddd",
-                    background: "white",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
-                >
-                  View Details
-                </button>
+              <Link to={`/orders/${order._id}`} className="mt-3 inline-flex text-sm font-semibold text-[color:var(--accent)]">
+                View details
               </Link>
             </div>
           ))}

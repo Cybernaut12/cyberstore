@@ -2,16 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --text: #171717;
+  --text-muted: #525252;
+  --border: #e7e5e4;
+  --primary: #111827;
+  --primary-hover: #1f2937;
+  --accent: #ea580c;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
 
-code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+.dark {
+  --bg: #131313;
+  --surface: #1c1c1c;
+  --text: #f5f5f5;
+  --text-muted: #a3a3a3;
+  --border: #262626;
+  --primary: #fafafa;
+  --primary-hover: #e5e5e5;
+  --accent: #fb923c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-[color:var(--bg)] text-[color:var(--text)];
+  }
+
+  .container-app {
+    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-sm;
+  }
+
+  .page-title {
+    @apply text-3xl font-extrabold tracking-tight md:text-4xl;
+  }
+
+  .page-subtitle {
+    @apply mt-2 text-sm text-[color:var(--text-muted)] md:text-base;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-[color:var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-900;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text)] transition hover:bg-slate-50 dark:hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-xl border border-[color:var(--danger)] px-4 py-2.5 text-sm font-semibold text-[color:var(--danger)] transition hover:bg-red-50 dark:hover:bg-red-950/40;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-sm outline-none transition focus:border-[color:var(--accent)] focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-[color:var(--text)];
+  }
+
+  .helper {
+    @apply mt-1 text-xs text-[color:var(--text-muted)];
+  }
+
+  .error-text {
+    @apply mt-1 text-xs text-[color:var(--danger)];
+  }
+
+  .status-pill {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .status-approved,
+  .status-paid {
+    @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300;
+  }
+
+  .status-pending {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300;
+  }
+
+  .status-rejected,
+  .status-unpaid {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300;
+  }
+
+  .status-delivered {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300;
+  }
+
+  .loader {
+    @apply h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-700 dark:border-t-slate-100;
+  }
+
+  .glass-nav {
+    @apply sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--surface)] shadow-sm backdrop-blur;
+  }
+
+  .shadow-lift {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
 }

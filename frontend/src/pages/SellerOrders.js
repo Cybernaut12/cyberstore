@@ -1,68 +1,68 @@
 import React, { useEffect, useState } from "react";
 import API from "../api/axios";
+import Loader from "../components/ui/Loader";
+import EmptyState from "../components/ui/EmptyState";
+import StatusPill from "../components/ui/StatusPill";
+import { useToast } from "../components/ui/ToastContext";
 
 function SellerOrders() {
+  const { pushToast } = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSellerOrders = async () => {
       try {
-        const { data } = await API.get("/orders/seller");
+        const { data } = await API.get("/seller/orders");
         setOrders(data);
       } catch (error) {
-        alert(error.response?.data?.message || "Failed to load seller orders");
+        pushToast(error.response?.data?.message || "Failed to load seller orders", "error");
       } finally {
         setLoading(false);
       }
     };
 
     fetchSellerOrders();
-  }, []);
+  }, [pushToast]);
 
-  if (loading) return <div style={{ padding: "40px" }}>Loading...</div>;
+  if (loading) return <div className="container-app"><Loader label="Loading seller orders..." /></div>;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>Orders for My Products</h2>
+    <div className="container-app space-y-4">
+      <h1 className="page-title">Orders for My Products</h1>
 
       {orders.length === 0 ? (
-        <p>No orders yet.</p>
+        <EmptyState title="No seller orders yet" description="Orders containing your products will appear here." />
       ) : (
-        <div style={{ display: "grid", gap: "14px", marginTop: "18px" }}>
+        <div className="grid gap-3">
           {orders.map((o) => (
-            <div
-              key={o._id}
-              style={{ border: "1px solid #eee", borderRadius: "10px", padding: "14px" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div>
-                  <p style={{ margin: 0 }}>
-                    <b>Order:</b> {o._id}
-                  </p>
-                  <p style={{ margin: "6px 0", color: "#555" }}>
-                    <b>Buyer:</b> {o.buyer?.name || o.user?.name || "—"} ({o.buyer?.email || o.user?.email || "—"})
-                  </p>
+            <details key={o._id} className="card overflow-hidden">
+              <summary className="cursor-pointer list-none p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Order #{o._id.slice(-8)}</p>
+                    <p className="text-xs text-[color:var(--text-muted)]">Buyer: {o.buyer?.name || "-"} ({o.buyer?.email || "-"})</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">₦{o.totalPrice}</p>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <StatusPill status={o.isPaid ? "paid" : "unpaid"}>{o.isPaid ? "Paid" : "Not Paid"}</StatusPill>
+                      <StatusPill status={String(o.status).toLowerCase() === "delivered" ? "delivered" : "pending"}>{o.status}</StatusPill>
+                    </div>
+                  </div>
                 </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <b>₦{o.totalPrice}</b>
-                  <p style={{ margin: "6px 0" }}>{o.isPaid ? "✅ Paid" : "❌ Not Paid"}</p>
-                  <p style={{ margin: 0 }}>{o.status === "Delivered" ? "📦 Delivered" : o.status}</p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: "10px" }}>
-                <b>Items:</b>
-                <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
+              </summary>
+              <div className="border-t border-[color:var(--border)] p-4">
+                <p className="mb-2 text-sm font-semibold">Items belonging to you</p>
+                <div className="grid gap-2">
                   {o.orderItems.map((it) => (
-                    <div key={it._id} style={{ borderTop: "1px solid #f1f1f1", paddingTop: "8px" }}>
-                      <b>{it.name}</b> — Qty: {it.qty} × ₦{it.price}
+                    <div key={it._id} className="rounded-xl border border-[color:var(--border)] p-3 text-sm">
+                      <b>{it.name}</b> <span className="text-[color:var(--text-muted)]">Qty {it.qty} × ₦{it.price}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            </details>
           ))}
         </div>
       )}

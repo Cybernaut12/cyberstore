@@ -11,11 +11,15 @@ const generateToken = (id) => {
 // REGISTER
 exports.registerUser = async (req, res) => {
   try {
+    if(!req.body){
+      return res.status(400).json({message : "INVALID REQUEST BODY" , error : "Body not supplied", success : false})
+    }
+
     const { name, email, password, role } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "User already exists" , success : false});
     }
 
     const user = await User.create({
@@ -52,9 +56,9 @@ exports.loginUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(401).json({ message: "Invalid email or password" });
+      res.status(401).json({ message: "Invalid email or password" , success : false});
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message  , success : false});
   }
 };

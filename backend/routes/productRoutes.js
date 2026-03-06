@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   createProduct,
+  createProductAsAdmin,
   getProducts,
   getProductById,
   updateProduct,
@@ -27,6 +28,7 @@ router.get("/", getProducts);
 router.get("/mine", protect, isSeller, getMyProducts);
 router.get("/top", getTopProducts);
 router.get("/admin/pending", protect, isAdmin, getPendingProducts);
+router.post("/admin", protect, isAdmin, createProductValidator, validate, createProductAsAdmin);
 router.put("/admin/:id/approve", protect, isAdmin, approveProduct);
 router.put("/admin/:id/reject", protect, isAdmin, rejectProduct);
 router.post("/:id/reviews", protect, createProductReview);

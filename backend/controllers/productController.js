@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // @desc   Create product (Seller only)
 // @route  POST /api/products
@@ -27,6 +28,34 @@ exports.createProduct = async (req, res) => {
   }
 };
 
+// @desc   Create product (Admin)
+// @route  POST /api/products/admin
+// @access Private (Admin)
+exports.createProductAsAdmin = async (req, res) => {
+  try {
+    const { name, description, price, category, brand, size, color, stock, image } =
+      req.body;
+
+    const product = await Product.create({
+      seller: req.user._id,
+      name,
+      description,
+      price,
+      category,
+      brand,
+      size,
+      color,
+      stock,
+      image,
+      status: "approved",
+    });
+
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc   Get all products (with search, filter, pagination)
 // @route  GET /api/products
 // @access Public
@@ -42,9 +71,33 @@ exports.getProducts = async (req, res) => {
     // Public should only see approved products
     query.status = "approved";
 
-    // Search by keyword (name)
+    // Search by keyword
     if (req.query.keyword) {
-      query.name = { $regex: req.query.keyword, $options: "i" };
+      const keyword = String(req.query.keyword).trim();
+      const normalized = keyword.toLowerCase();
+
+      if (normalized === "men") {
+        const menPattern = "\\bmens?\\b";
+        query.$or = [
+          { category: { $regex: menPattern, $options: "i" } },
+          { name: { $regex: menPattern, $options: "i" } },
+          { description: { $regex: menPattern, $options: "i" } },
+        ];
+      } else if (normalized === "women" || normalized === "woman") {
+        const womenPattern = "\\bwomens?\\b|\\bwomen\\b";
+        query.$or = [
+          { category: { $regex: womenPattern, $options: "i" } },
+          { name: { $regex: womenPattern, $options: "i" } },
+          { description: { $regex: womenPattern, $options: "i" } },
+        ];
+      } else {
+        const safeKeyword = escapeRegex(keyword);
+        query.$or = [
+          { name: { $regex: safeKeyword, $options: "i" } },
+          { category: { $regex: safeKeyword, $options: "i" } },
+          { brand: { $regex: safeKeyword, $options: "i" } },
+        ];
+      }
     }
 
     // Filter by category

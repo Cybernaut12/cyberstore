@@ -1,20 +1,22 @@
+const CART_EVENT = "cyberstore:cart-updated";
+
 export const getCart = () => {
   return JSON.parse(localStorage.getItem("cart")) || [];
 };
 
 export const saveCart = (cart) => {
   localStorage.setItem("cart", JSON.stringify(cart));
+  window.dispatchEvent(new Event(CART_EVENT));
 };
 
 export const addToCart = (product, qty = 1) => {
   const cart = getCart();
-
   const existing = cart.find((item) => item._id === product._id);
 
   if (existing) {
     const updated = cart.map((item) =>
       item._id === product._id
-        ? { ...item, qty: item.qty + qty }
+        ? { ...item, qty: Math.min(item.qty + qty, item.stock || item.qty + qty) }
         : item
     );
     saveCart(updated);
@@ -53,4 +55,7 @@ export const removeFromCart = (id) => {
 
 export const clearCart = () => {
   localStorage.removeItem("cart");
+  window.dispatchEvent(new Event(CART_EVENT));
 };
+
+export const cartEventName = CART_EVENT;

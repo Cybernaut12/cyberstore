@@ -1,142 +1,153 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
-import { useNavigate } from "react-router-dom";
 import { addToCart } from "../utils/cart";
-
+import Button from "../components/ui/Button";
+import Loader from "../components/ui/Loader";
+import InputField from "../components/ui/InputField";
+import { useToast } from "../components/ui/ToastContext";
+import { AuthContext } from "../context/AuthContext";
+import { resolveImageUrl } from "../utils/image";
 
 function ProductDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const { pushToast } = useToast();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const existingReview = useMemo(
+    () => product?.reviews?.find((r) => r.user === user?._id),
+    [product?.reviews, user?._id]
+  );
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const { data } = await API.get(`/products/${id}`);
+      setProduct(data);
+    } catch (error) {
+      pushToast(error.response?.data?.message || "Failed to load product", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const { data } = await API.get(`/products/${id}`);
-        setProduct(data);
-      } catch (error) {
-        alert(error.response?.data?.message || "Failed to load product");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProduct();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (loading) return <div style={{ padding: "40px" }}>Loading...</div>;
-  if (!product) return <div style={{ padding: "40px" }}>Product not found</div>;
+  useEffect(() => {
+    if (existingReview) {
+      setRating(existingReview.rating);
+      setComment(existingReview.comment);
+    }
+  }, [existingReview]);
+
+  const handleAddToCart = () => {
+    addToCart(product, 1);
+    pushToast("Added to cart", "success");
+    navigate("/cart");
+  };
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+    if (!user) return pushToast("Login to review products", "error");
+    if (user.role !== "buyer") return pushToast("Only buyers can write reviews", "error");
+
+    try {
+      setSubmitting(true);
+      const payload = { rating, comment };
+      if (existingReview) {
+        await API.put(`/products/${id}/reviews`, payload);
+        pushToast("Review updated", "success");
+      } else {
+        await API.post(`/products/${id}/reviews`, payload);
+        pushToast("Review submitted", "success");
+      }
+      await fetchProduct();
+      if (!existingReview) {
+        setRating(5);
+        setComment("");
+      }
+    } catch (error) {
+      pushToast(error.response?.data?.message || "Review failed", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="container-app"><Loader label="Loading product..." /></div>;
+  if (!product) return <div className="container-app"><p>Product not found.</p></div>;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <Link to="/" style={{ textDecoration: "none" }}>← Back</Link>
+    <div className="container-app space-y-6">
+      <nav className="text-sm text-[color:var(--text-muted)]">
+        <Link to="/" className="text-[color:var(--accent)]">Home</Link> / {product.category || "Category"} / {product.name}
+      </nav>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "30px",
-          marginTop: "20px",
-          alignItems: "start",
-        }}
-      >
-        <img
-          src={
-            product.image?.startsWith("http")
-              ? product.image
-              : "https://via.placeholder.com/600x400?text=No+Image"
-          }
-          alt={product.name}
-          style={{
-            width: "100%",
-            maxHeight: "450px",
-            objectFit: "cover",
-            borderRadius: "12px",
-            border: "1px solid #eee",
-          }}
-        />
-
-        <div>
-          <h2 style={{ marginTop: 0 }}>{product.name}</h2>
-
-          <p style={{ fontSize: "20px", fontWeight: "bold" }}>
-            ₦{product.price}
-          </p>
-
-          <p style={{ color: "#444", lineHeight: "1.6" }}>
-            {product.description}
-          </p>
-
-          <div style={{ marginTop: "10px", fontSize: "14px", color: "#555" }}>
-            <p><b>Category:</b> {product.category}</p>
-            <p><b>Brand:</b> {product.brand || "—"}</p>
-            <p><b>Size:</b> {product.size || "—"}</p>
-            <p><b>Color:</b> {product.color || "—"}</p>
-            <p><b>Stock:</b> {product.stock}</p>
-            <p>
-              <b>Seller:</b>{" "}
-              {product.seller?.name ? `${product.seller.name} (${product.seller.email})` : "—"}
-            </p>
-          </div>
-
-          <button
-            style={{
-              marginTop: "16px",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              border: "none",
-              background: "black",
-              color: "white",
-              cursor: "pointer",
-              width: "100%",
-              fontWeight: "bold",
-            }}
-            onClick={() => {
-  addToCart(product, 1);
-  navigate("/cart");
-}}
-
-          >
-            Add to Cart
-          </button>
-
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "14px",
-              border: "1px solid #eee",
-              borderRadius: "10px",
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>Reviews</h3>
-            <p>
-              <b>Rating:</b> {product.rating} / 5 ({product.numReviews} reviews)
-            </p>
-
-            {product.reviews?.length === 0 ? (
-              <p style={{ color: "#666" }}>No reviews yet.</p>
-            ) : (
-              product.reviews.map((r) => (
-                <div
-                  key={r._id}
-                  style={{
-                    borderTop: "1px solid #eee",
-                    paddingTop: "10px",
-                    marginTop: "10px",
-                  }}
-                >
-                  <p style={{ margin: 0 }}>
-                    <b>{r.name}</b> — {r.rating}/5
-                  </p>
-                  <p style={{ margin: "6px 0 0", color: "#444" }}>{r.comment}</p>
-                </div>
-              ))
-            )}
-          </div>
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="card overflow-hidden">
+          <img
+            src={resolveImageUrl(product.image, "https://via.placeholder.com/900x700?text=No+Image")}
+            alt={product.name}
+            className="h-full w-full object-cover"
+          />
         </div>
-      </div>
+
+        <div className="card p-5 md:p-6">
+          <h1 className="text-2xl font-bold md:text-3xl">{product.name}</h1>
+          <p className="mt-2 text-2xl font-extrabold">₦{product.price}</p>
+          <p className="mt-2 text-sm text-[color:var(--text-muted)]">⭐ {Number(product.rating || 0).toFixed(1)} ({product.numReviews || 0} reviews)</p>
+          <p className="mt-4 text-sm text-[color:var(--text-muted)]">{product.description}</p>
+
+          <div className="mt-4 rounded-xl border border-[color:var(--border)] p-4 text-sm">
+            <p><b>Seller:</b> {product.seller?.name || "Unknown"} {product.seller?.email ? `(${product.seller.email})` : ""}</p>
+            <p className="mt-1"><b>Stock:</b> {product.stock}</p>
+            <p className="mt-1"><b>Size:</b> {product.size || "-"}</p>
+            <p className="mt-1"><b>Color:</b> {product.color || "-"}</p>
+          </div>
+
+          <Button className="mt-5 w-full" onClick={handleAddToCart}>Add to Cart</Button>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">Reviews</h2>
+
+        {product.reviews?.length ? (
+          <div className="grid gap-3">
+            {product.reviews.map((r) => (
+              <div key={r._id} className="card p-4">
+                <p className="text-sm font-semibold">{r.name} <span className="ml-2 text-[color:var(--text-muted)]">⭐ {r.rating}/5</span></p>
+                <p className="mt-1 text-sm text-[color:var(--text-muted)]">{r.comment}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-6 text-sm text-[color:var(--text-muted)]">No reviews yet.</div>
+        )}
+
+        <form onSubmit={submitReview} className="card space-y-4 p-4 md:p-5">
+          <h3 className="text-base font-semibold">{existingReview ? "Update your review" : "Write a review"}</h3>
+          <select value={rating} onChange={(e) => setRating(Number(e.target.value))} className="input">
+            {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} Stars</option>)}
+          </select>
+          <InputField
+            placeholder="Share your experience"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            required
+          />
+          <Button disabled={submitting}>{submitting ? "Submitting..." : existingReview ? "Update Review" : "Post Review"}</Button>
+        </form>
+      </section>
     </div>
   );
 }

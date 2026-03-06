@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import API from "../api/axios";
+import Loader from "../components/ui/Loader";
+import EmptyState from "../components/ui/EmptyState";
+import StatusPill from "../components/ui/StatusPill";
+import Button from "../components/ui/Button";
+import { useToast } from "../components/ui/ToastContext";
 
 function AdminOrders() {
+  const { pushToast } = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchOrders = async () => {
     try {
       const { data } = await API.get("/orders");
       setOrders(data);
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to load orders");
+      pushToast(error.response?.data?.message || "Failed to load orders", "error");
     } finally {
       setLoading(false);
     }
@@ -19,56 +26,71 @@ function AdminOrders() {
 
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const filteredOrders = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return orders;
+    return orders.filter((o) =>
+      o._id.toLowerCase().includes(query) || o.user?.email?.toLowerCase().includes(query)
+    );
+  }, [orders, search]);
 
   const markDelivered = async (id) => {
     try {
       setActionLoading(true);
       await API.put(`/orders/${id}/deliver`, {});
+      pushToast("Order marked delivered", "success");
       await fetchOrders();
     } catch (error) {
-      alert(error.response?.data?.message || "Deliver update failed");
+      pushToast(error.response?.data?.message || "Delivery update failed", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading) return <div style={{ padding: "40px" }}>Loading...</div>;
+  if (loading) return <div className="container-app"><Loader label="Loading all orders..." /></div>;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>All Orders</h2>
+    <div className="container-app space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="page-title">All Orders</h1>
+        <input
+          className="input w-full max-w-sm"
+          placeholder="Search by order ID or buyer email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
-      {orders.length === 0 ? (
-        <p>No orders.</p>
+      {filteredOrders.length === 0 ? (
+        <EmptyState title="No orders found" description="Try another search query." />
       ) : (
-        <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
-          {orders.map((o) => (
-            <div key={o._id} style={card}>
+        <div className="grid gap-3">
+          {filteredOrders.map((o) => (
+            <div key={o._id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <b>Order:</b> {o._id}
-                <p style={{ margin: "6px 0", color: "#555" }}>
-                  Buyer: {o.user?.name} ({o.user?.email})
-                </p>
-                <p style={{ margin: 0 }}>
-                  ₦{o.totalPrice} — {o.isPaid ? "✅ Paid" : "❌ Not Paid"} — {o.status}
-                </p>
+                <p className="text-sm font-semibold">Order #{o._id.slice(-8)}</p>
+                <p className="text-xs text-[color:var(--text-muted)]">{o.user?.name} ({o.user?.email})</p>
+                <p className="mt-1 text-xs text-[color:var(--text-muted)]">{o.createdAt ? new Date(o.createdAt).toLocaleString() : "-"}</p>
               </div>
 
-              <button
-                disabled={actionLoading || o.status === "Delivered"}
+              <div className="text-right">
+                <p className="font-bold">₦{o.totalPrice}</p>
+                <div className="mt-2 flex justify-end gap-2">
+                  <StatusPill status={o.isPaid ? "paid" : "unpaid"}>{o.isPaid ? "Paid" : "Not Paid"}</StatusPill>
+                  <StatusPill status={String(o.status).toLowerCase() === "delivered" ? "delivered" : "pending"}>{o.status}</StatusPill>
+                </div>
+              </div>
+
+              <Button
+                variant={String(o.status).toLowerCase() === "delivered" ? "secondary" : "primary"}
+                disabled={actionLoading || String(o.status).toLowerCase() === "delivered"}
                 onClick={() => markDelivered(o._id)}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: o.status === "Delivered" ? "#ddd" : "black",
-                  color: o.status === "Delivered" ? "#555" : "white",
-                  cursor: o.status === "Delivered" ? "not-allowed" : "pointer",
-                }}
               >
-                {o.status === "Delivered" ? "Delivered" : "Mark Delivered"}
-              </button>
+                {String(o.status).toLowerCase() === "delivered" ? "Delivered" : "Mark Delivered"}
+              </Button>
             </div>
           ))}
         </div>
@@ -76,15 +98,5 @@ function AdminOrders() {
     </div>
   );
 }
-
-const card = {
-  border: "1px solid #eee",
-  borderRadius: "10px",
-  padding: "14px",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "14px",
-};
 
 export default AdminOrders;
