@@ -53,6 +53,7 @@ function AdminDashboard() {
 
       <div className="flex flex-wrap gap-3">
         <Link className="btn-primary" to="/admin/add-product">Add Product</Link>
+        <Link className="btn-secondary" to="/admin/products">All Products</Link>
         <Link className="btn-secondary" to="/admin/pending-products">Pending Products</Link>
         <Link className="btn-secondary" to="/admin/orders">All Orders</Link>
       </div>

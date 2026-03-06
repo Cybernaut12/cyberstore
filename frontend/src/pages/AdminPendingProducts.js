@@ -15,6 +15,7 @@ function AdminPendingProducts() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejecting, setRejecting] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [reason, setReason] = useState("");
 
   const fetchPending = async () => {
@@ -62,13 +63,31 @@ function AdminPendingProducts() {
     }
   };
 
+  const deleteProduct = async () => {
+    if (!deletingId) return;
+    try {
+      setActionLoading(true);
+      await API.delete(`/products/admin/${deletingId}`);
+      pushToast("Product deleted", "success");
+      setDeletingId(null);
+      await fetchPending();
+    } catch (error) {
+      pushToast(error.response?.data?.message || "Delete failed", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <div className="container-app"><Loader label="Loading pending products..." /></div>;
 
   return (
     <div className="container-app space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="page-title">Pending Products</h1>
-        <Link to="/admin/add-product" className="btn-primary">Add Product</Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/admin/add-product" className="btn-primary">Add Product</Link>
+          <Link to="/admin/products" className="btn-secondary">All Products</Link>
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -91,6 +110,7 @@ function AdminPendingProducts() {
               <div className="flex gap-2">
                 <Button disabled={actionLoading} onClick={() => approve(p._id)}>Approve</Button>
                 <Button variant="danger" disabled={actionLoading} onClick={() => setRejecting(p._id)}>Reject</Button>
+                <Button variant="danger" disabled={actionLoading} onClick={() => setDeletingId(p._id)}>Delete</Button>
               </div>
             </div>
           ))}
@@ -116,6 +136,16 @@ function AdminPendingProducts() {
           placeholder="e.g. Poor image quality, incomplete description"
         />
       </ConfirmModal>
+
+      <ConfirmModal
+        open={Boolean(deletingId)}
+        title="Delete product"
+        description="This action permanently removes the product."
+        confirmText="Delete"
+        danger
+        onCancel={() => setDeletingId(null)}
+        onConfirm={deleteProduct}
+      />
     </div>
   );
 }

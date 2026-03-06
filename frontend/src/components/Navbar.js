@@ -60,6 +60,7 @@ function Navbar() {
     user?.role === "seller" ? { to: "/seller/add-product", label: "Add Product" } : null,
     user?.role === "seller" ? { to: "/seller", label: "Seller Dashboard" } : null,
     user?.role === "admin" ? { to: "/admin/add-product", label: "Add Product" } : null,
+    user?.role === "admin" ? { to: "/admin/products", label: "All Products" } : null,
     user?.role === "admin" ? { to: "/admin", label: "Admin Dashboard" } : null,
   ].filter(Boolean);
 

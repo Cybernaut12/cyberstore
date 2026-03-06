@@ -106,17 +106,29 @@ exports.getProducts = async (req, res) => {
     }
 
     // Filter by price range
-    if (req.query.minPrice || req.query.maxPrice) {
+    const minPrice = Number(req.query.minPrice);
+    const maxPrice = Number(req.query.maxPrice);
+    if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
       query.price = {};
-      if (req.query.minPrice) query.price.$gte = Number(req.query.minPrice);
-      if (req.query.maxPrice) query.price.$lte = Number(req.query.maxPrice);
+      if (Number.isFinite(minPrice)) query.price.$gte = minPrice;
+      if (Number.isFinite(maxPrice)) query.price.$lte = maxPrice;
     }
+
+    const sortMap = {
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+      "price-low": { price: 1, createdAt: -1 },
+      "price-high": { price: -1, createdAt: -1 },
+      rating: { rating: -1, numReviews: -1 },
+    };
+    const sortOption = String(req.query.sort || "newest");
+    const sort = sortMap[sortOption] || sortMap.newest;
 
     const total = await Product.countDocuments(query);
 
     const products = await Product.find(query)
       .populate("seller", "name email")
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(limit);
 
@@ -127,6 +139,24 @@ exports.getProducts = async (req, res) => {
       count: products.length,
       products,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc   Get approved product categories
+// @route  GET /api/products/categories
+// @access Public
+exports.getProductCategories = async (req, res) => {
+  try {
+    const categories = await Product.distinct("category", { status: "approved" });
+    const cleaned = categories
+      .filter(Boolean)
+      .map((c) => String(c).trim())
+      .filter((c) => c.length > 0)
+      .sort((a, b) => a.localeCompare(b));
+
+    res.json(cleaned);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -421,6 +451,36 @@ exports.rejectProduct = async (req, res) => {
     const updated = await product.save();
 
     res.json({ message: "Product rejected", product: updated });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc   Admin: Get all products
+// @route  GET /api/products/admin/all
+// @access Private (Admin)
+exports.getAllProductsAdmin = async (req, res) => {
+  try {
+    const products = await Product.find({})
+      .populate("seller", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc   Admin: Delete any product
+// @route  DELETE /api/products/admin/:id
+// @access Private (Admin)
+exports.deleteProductAsAdmin = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    await product.deleteOne();
+    res.json({ message: "Product deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

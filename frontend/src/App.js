@@ -18,6 +18,7 @@ import SellerOrders from "./pages/SellerOrders";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPendingProducts from "./pages/AdminPendingProducts";
 import AdminOrders from "./pages/AdminOrders";
+import AdminProducts from "./pages/AdminProducts";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -71,6 +72,10 @@ function App() {
                   <Route
                     path="/admin/pending-products"
                     element={<ProtectedRoute roles={["admin"]}><AdminPendingProducts /></ProtectedRoute>}
+                  />
+                  <Route
+                    path="/admin/products"
+                    element={<ProtectedRoute roles={["admin"]}><AdminProducts /></ProtectedRoute>}
                   />
                   <Route
                     path="/admin/orders"

@@ -19,6 +19,7 @@ function Home() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageMeta, setPageMeta] = useState({ page: 1, pages: 1 });
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [filters, setFilters] = useState({
     category: "",
     minPrice: "",
@@ -37,15 +38,11 @@ function Home() {
           category: filters.category || undefined,
           minPrice: filters.minPrice || undefined,
           maxPrice: filters.maxPrice || undefined,
+          sort: filters.sort || "newest",
         },
       });
 
-      let items = data.products || [];
-      if (filters.sort === "price-low") items = [...items].sort((a, b) => a.price - b.price);
-      if (filters.sort === "price-high") items = [...items].sort((a, b) => b.price - a.price);
-      if (filters.sort === "rating") items = [...items].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-
-      setProducts(items);
+      setProducts(data.products || []);
       setPageMeta({ page: data.page || 1, pages: data.pages || 1 });
     } catch (e) {
       pushToast(e.response?.data?.message || "Failed to load products", "error");
@@ -59,6 +56,19 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryQ, filters.category, filters.minPrice, filters.maxPrice, filters.sort]);
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { data } = await API.get("/products/categories");
+        setCategoryOptions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        pushToast(error.response?.data?.message || "Failed to load categories", "error");
+      }
+    };
+
+    loadCategories();
+  }, [pushToast]);
+
   const visiblePages = useMemo(() => {
     const total = pageMeta.pages || 1;
     const current = pageMeta.page || 1;
@@ -68,8 +78,6 @@ function Home() {
 
     return Array.from({ length: end - adjustedStart + 1 }, (_, i) => adjustedStart + i);
   }, [pageMeta.page, pageMeta.pages]);
-
-  const categoryOptions = ["Hoodie", "T-Shirt", "Sneakers", "Jeans", "Jacket", "Accessories"];
 
   return (
     <div className="container-app space-y-8">
@@ -166,6 +174,7 @@ function Home() {
             className="input"
           >
             <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Oldest</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
             <option value="rating">Rating</option>
