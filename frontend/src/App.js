@@ -19,8 +19,11 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminPendingProducts from "./pages/AdminPendingProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminProducts from "./pages/AdminProducts";
+import AdminManageAdmins from "./pages/AdminManageAdmins";
 import Login from "./pages/Login";
+import RegisterOtp from "./pages/LoginOtp";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import Home from "./pages/Home";
 import AddProduct from "./pages/AddProduct";
 import Blog from "./pages/Blog";
@@ -38,7 +41,9 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/register-verify" element={<RegisterOtp />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/product/:id" element={<ProductDetails />} />
                   <Route path="/checkout" element={<Checkout />} />
@@ -76,6 +81,10 @@ function App() {
                   <Route
                     path="/admin/products"
                     element={<ProtectedRoute roles={["admin"]}><AdminProducts /></ProtectedRoute>}
+                  />
+                  <Route
+                    path="/admin/manage-admins"
+                    element={<ProtectedRoute roles={["admin"]}><AdminManageAdmins /></ProtectedRoute>}
                   />
                   <Route
                     path="/admin/orders"

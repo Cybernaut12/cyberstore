@@ -27,6 +27,28 @@ const userSchema = new mongoose.Schema(
       enum: ["buyer", "seller", "admin"],
       default: "buyer",
     },
+
+    isEmailVerified: {
+      type: Boolean,
+      default: true,
+    },
+
+    loginOtpHash: {
+      type: String,
+      default: "",
+    },
+    loginOtpExpires: {
+      type: Date,
+      default: null,
+    },
+    resetCodeHash: {
+      type: String,
+      default: "",
+    },
+    resetCodeExpires: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
